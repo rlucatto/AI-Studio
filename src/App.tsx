@@ -27,6 +27,7 @@ import { format } from 'date-fns';
 import { cn, formatOrderId, formatSequence } from './lib/utils';
 import { PickItem, PickStatus, Wave } from './types';
 import { Language, translations } from './i18n';
+import logo from './assets/LogCHPGAJ.png';
 
 // Constants
 const DEFAULT_PASSWORD = "1234";
@@ -337,7 +338,12 @@ export default function App() {
             </div>
           </div>
           <div className="flex-1 flex justify-center">
-            {/* Logo removido conforme solicitado */}
+            <img 
+              src={logo} 
+              alt="Logo" 
+              className="h-10 w-auto object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div className="flex-1 flex justify-end">
             <button 
