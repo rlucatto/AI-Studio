@@ -38,7 +38,7 @@ const CYCLE_TIME = 3000; // 3 seconds per state
 const SAMPLE_PRODUCTS = [
   { name: "Smartwatch Pro Gen-T", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80" },
   { name: "Headphone Studio ANC", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80" },
-  { name: "Caixa de Som BassMax", image: "https://picsum.photos/seed/bassmax/800/800" },
+  { name: "Cadeira Gamer Ergonômica", image: "https://images.unsplash.com/photo-1598550476439-6847785fce66?w=800&q=80" },
   { name: "Relógio Classic Leather", image: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=800&q=80" },
   { name: "Teclado Mecânico K1", image: "https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=800&q=80" },
   { name: "Mouse Gamer RGB", image: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=800&q=80" },
