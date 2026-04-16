@@ -1,0 +1,6 @@
+{
+  "name": "WAVE DASHBOARD",
+  "description": "Dashboard de simulação de ondas de coleta para armazéns (WMS) com truck autônomo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;600;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Outfit", sans-serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+  --font-label: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-display: "Outfit", sans-serif;
+  --font-tech: "Space Grotesk", sans-serif;
+
+  --color-surface-container: #eceef0;
+  --color-on-error-container: #93000a;
+  --color-surface-bright: #f8f9fb;
+  --color-secondary: #505f76;
+  --color-on-surface-variant: #424653;
+  --color-surface-tint: #0758cb;
+  --color-on-tertiary-container: #acffd4;
+  --color-secondary-container: #d0e1fb;
+  --color-secondary-fixed-dim: #b7c8e1;
+  --color-on-background: #191c1e;
+  --color-outline-variant: #c3c6d6;
+  --color-surface-container-high: #e6e8ea;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-highest: #e0e3e5;
+  --color-outline: #737785;
+  --color-on-secondary: #ffffff;
+  --color-primary-container: #2666d9;
+  --color-secondary-fixed: #d3e4fe;
+  --color-primary-fixed: #d9e2ff;
+  --color-on-error: #ffffff;
+  --color-inverse-primary: #b0c6ff;
+  --color-background: #f8f9fb;
+  --color-on-tertiary-fixed: #002113;
+  --color-tertiary-container: #007b54;
+  --color-surface-container-low: #f2f4f6;
+  --color-on-tertiary: #ffffff;
+  --color-on-surface: #191c1e;
+  --color-inverse-surface: #2d3133;
+  --color-on-primary-container: #eaedff;
+  --color-on-primary-fixed-variant: #00419d;
+  --color-error-container: #ffdad6;
+  --color-on-primary-fixed: #001946;
+  --color-error: #ba1a1a;
+  --color-on-tertiary-fixed-variant: #005236;
+  --color-tertiary: #006040;
+  --color-tertiary-fixed-dim: #4edea3;
+  --color-surface: #f8f9fb;
+  --color-on-secondary-fixed: #0b1c30;
+  --color-inverse-on-surface: #eff1f3;
+  --color-surface-variant: #e0e3e5;
+  --color-primary-fixed-dim: #b0c6ff;
+  --color-primary: #004db7;
+  --color-on-secondary-fixed-variant: #38485d;
+  --color-on-primary: #ffffff;
+  --color-surface-dim: #d8dadc;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-body font-bold;
+  }
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-surface-container rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-outline-variant rounded-full hover:bg-outline transition-colors;
+}
