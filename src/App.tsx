@@ -19,12 +19,14 @@ import {
   ArrowRight,
   Save,
   RotateCcw,
-  Database
+  Database,
+  SkipForward
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { cn, formatOrderId, formatSequence } from './lib/utils';
 import { PickItem, PickStatus, Wave } from './types';
+import { Language, translations } from './i18n';
 
 // Constants
 const DEFAULT_PASSWORD = "1234";
@@ -42,7 +44,7 @@ const SAMPLE_PRODUCTS = [
   { name: "Câmera Mirrorless V3", image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80" },
   { name: "Drone Explorer Air", image: "https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=800&q=80" },
   { name: "Tablet Pro 12.9", image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=800&q=80" },
-  { name: "Caixa de Som Bluetooth", image: "https://images.unsplash.com/photo-1608156639585-34a0a56ee6c9?w=800&q=80" },
+  { name: "Notebook Gamer Ultra i9", image: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=800&q=80" },
   { name: "Carregador MagSafe", image: "https://images.unsplash.com/photo-1615526675159-e248c3021d3f?w=800&q=80" },
 ];
 
@@ -82,6 +84,14 @@ export default function App() {
   const [isAuth, setIsAuth] = useState(false);
   const [timeLeft, setTimeLeft] = useState(862); // 14:22 in seconds
   const [isHolding, setIsHolding] = useState(false);
+  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('wms_lang') as Language) || 'pt');
+
+  const t = (key: keyof typeof translations['pt']): string => (translations[lang] as any)[key] || key;
+
+  // Persistence Effects
+  useEffect(() => {
+    localStorage.setItem('wms_lang', lang);
+  }, [lang]);
 
   // SQL Server State
   const [sqlConfig, setSqlConfig] = useState(() => {
@@ -220,12 +230,37 @@ export default function App() {
     }));
   };
 
+  const handleManualStep = () => {
+    if (!currentPick || isSimulationRunning || isHolding) return;
+    
+    const currentIndex = STATUS_CYCLE.indexOf(currentPick.status);
+    const nextStatus = STATUS_CYCLE[currentIndex + 1] || 'CONCLUIDO';
+    
+    if (nextStatus === 'CONCLUIDO') {
+      setIsHolding(true);
+      setTimeout(() => setIsHolding(false), 500);
+    }
+
+    setWaves(prev => prev.map(w => {
+      if (w.id !== activeWaveId) return w;
+      return {
+        ...w,
+        picks: w.picks.map(p => {
+          if (p.id === currentPick.id) {
+            return { ...p, status: nextStatus };
+          }
+          return p;
+        })
+      };
+    }));
+  };
+
   const handleSettingsAuth = () => {
     if (password === DEFAULT_PASSWORD) {
       setIsAuth(true);
       setPassword("");
     } else {
-      alert("Senha incorreta!");
+      alert(t('wrong_password'));
     }
   };
 
@@ -244,8 +279,28 @@ export default function App() {
       <div className="h-full w-full max-w-[1024px] bg-surface flex flex-col overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.1)] border-x border-outline-variant/20">
         {/* Header */}
         <header className="bg-surface-container-low h-14 w-full border-b border-outline-variant/20 flex items-center px-6 shrink-0">
-          <div className="flex-1 flex items-center">
-            <span className="text-xs font-extrabold font-tech text-primary uppercase tracking-widest">ID TRUCK: {truckId}</span>
+          <div className="flex-1 flex items-center gap-4">
+            <span className="text-xs font-extrabold font-tech text-primary uppercase tracking-widest">{t('truck_id_label')}: {truckId}</span>
+            <div className="flex bg-surface-container p-1 rounded-lg border border-outline-variant/20">
+              <button 
+                onClick={() => setLang('pt')}
+                className={cn(
+                  "px-2 py-0.5 text-[10px] font-bold rounded transition-all",
+                  lang === 'pt' ? "bg-primary text-white shadow-sm" : "text-outline hover:text-on-surface"
+                )}
+              >
+                PT
+              </button>
+              <button 
+                onClick={() => setLang('en')}
+                className={cn(
+                  "px-2 py-0.5 text-[10px] font-bold rounded transition-all",
+                  lang === 'en' ? "bg-primary text-white shadow-sm" : "text-outline hover:text-on-surface"
+                )}
+              >
+                EN
+              </button>
+            </div>
           </div>
           <div className="flex-1 flex justify-center">
             <span className="text-sm font-black text-on-surface-variant uppercase tracking-[0.2em] font-display">CHP Soluções</span>
@@ -264,7 +319,7 @@ export default function App() {
         {/* Progress Section */}
         <section className="mt-4 flex flex-col gap-2 items-center text-center shrink-0">
           <div className="flex flex-col w-full max-w-2xl">
-            <span className="text-xs font-extrabold uppercase text-outline tracking-wider">PROGRESSO DA ONDA</span>
+            <span className="text-xs font-extrabold uppercase text-outline tracking-wider">{t('wave_progress')}</span>
             <div className="flex items-end justify-center gap-6">
               <div className="flex items-baseline gap-2">
                 <span className="text-5xl font-extrabold mono text-primary tracking-tighter">
@@ -289,7 +344,7 @@ export default function App() {
                 onClick={() => setShowSimModal(true)}
                 className="flex items-center gap-2 bg-surface-container-high text-on-surface px-4 py-2 rounded-lg font-bold text-sm hover:bg-surface-container-highest transition-colors"
               >
-                <Plus size={18} /> SIMULAR
+                <Plus size={18} /> {t('simulate')}
               </button>
               {activeWave && (
                 <>
@@ -297,7 +352,7 @@ export default function App() {
                     onClick={handleResetSimulation}
                     className="flex items-center gap-2 bg-surface-container-high text-on-surface px-4 py-2 rounded-lg font-bold text-sm hover:bg-surface-container-highest transition-colors"
                   >
-                    <RotateCcw size={18} /> RESET
+                    <RotateCcw size={18} /> {t('reset')}
                   </button>
                   <button 
                     onClick={handleStartSimulation}
@@ -309,7 +364,20 @@ export default function App() {
                         : "bg-primary text-white hover:bg-primary/90 active:scale-95"
                     )}
                   >
-                    <Play size={18} fill="currentColor" /> INICIAR
+                    <Play size={18} fill="currentColor" /> {t('start')}
+                  </button>
+                  <button 
+                    onClick={handleManualStep}
+                    disabled={isSimulationRunning || completedCount === totalCount || isHolding}
+                    title={t('next_step')}
+                    className={cn(
+                      "flex items-center justify-center w-10 h-10 rounded-lg transition-all border-2",
+                      isSimulationRunning || completedCount === totalCount || isHolding
+                        ? "border-outline-variant text-outline-variant cursor-not-allowed opacity-50"
+                        : "border-primary text-primary hover:bg-primary/5 active:scale-95"
+                    )}
+                  >
+                    <SkipForward size={20} fill="currentColor" />
                   </button>
                 </>
               )}
@@ -319,7 +387,7 @@ export default function App() {
 
         {/* Current Pick Section */}
         <section className="flex flex-col gap-3 shrink-0">
-          <h2 className="text-xs font-extrabold uppercase tracking-[0.3em] text-primary">Coleta Atual</h2>
+          <h2 className="text-xs font-extrabold uppercase tracking-[0.3em] text-primary">{t('current_pick')}</h2>
           <AnimatePresence mode="wait">
             {currentPick ? (
               <motion.div 
@@ -332,7 +400,7 @@ export default function App() {
                 className={cn(
                   "bg-surface-container-lowest rounded-xl border-4 overflow-hidden shadow-xl transition-all duration-500",
                   currentPick.status === 'Deslocando' ? "border-error" : 
-                  currentPick.status === 'Aguardando coleta' ? "border-tertiary animate-pulse" : 
+                  currentPick.status === 'Aguardando coleta' ? "border-tertiary" : 
                   "border-primary"
                 )}
               >
@@ -341,25 +409,46 @@ export default function App() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="md:w-5/12 h-64 bg-surface-container flex items-center justify-center relative overflow-hidden"
+                    className="md:w-5/12 h-64 bg-surface-container flex flex-col items-center justify-center relative overflow-hidden"
                   >
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="absolute top-0 left-0 bg-primary text-white px-5 py-2 font-display text-4xl font-black tracking-tighter shadow-xl z-10 rounded-br-2xl border-r-4 border-b-4 border-white/20"
+                    >
+                      {formatSequence(currentPick.sequence)}
+                    </motion.div>
                     <img 
                       src={currentPick.productImage} 
                       alt={currentPick.productName}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
+                      className="absolute bottom-0 left-0 right-0 bg-black/50 backdrop-blur-sm py-2 px-4 flex justify-between items-center"
+                    >
+                      <span className="text-[10px] text-white font-tech font-bold uppercase tracking-widest">{currentPick.timestamp}</span>
+                      <Clock size={12} className="text-white/70" />
+                    </motion.div>
                   </motion.div>
-                  <div className="md:w-7/12 p-6 flex flex-col justify-between">
+                  <div className="md:w-7/12 p-6 flex flex-col justify-start">
                     <div>
-                      <motion.h3 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="text-3xl font-extrabold leading-tight tracking-tight"
-                      >
-                        {currentPick.productName}
-                      </motion.h3>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col">
+                          <motion.h3 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-3xl font-extrabold leading-tight tracking-tight"
+                          >
+                            {t(currentPick.productName as any)}
+                          </motion.h3>
+                        </div>
+                      </div>
                       <motion.div 
                         initial="hidden"
                         animate="visible"
@@ -373,27 +462,24 @@ export default function App() {
                             }
                           }
                         }}
-                        className="mt-6 flex flex-wrap items-end gap-x-5 gap-y-4"
+                        className="mt-6 flex items-end justify-start gap-x-3"
                       >
-                        <InfoItem label="Área" value={currentPick.area} />
-                        <InfoItem label="Zona" value={currentPick.zona} />
-                        <InfoItem label="Corredor" value={currentPick.corredor} />
-                        <InfoItem label="Comp." value={currentPick.compartimento} />
-                        <InfoItem label="Nível" value={currentPick.nivel} />
-                        <InfoItem label="Posição" value={currentPick.posicao} />
-                        <InfoItem label="Comando" value={currentPick.comando} />
+                        <InfoItem label={t('area')} value={currentPick.area} />
+                        <InfoItem label={t('zone')} value={currentPick.zona} />
+                        <InfoItem label={t('aisle')} value={currentPick.corredor} />
+                        <InfoItem label={t('comp')} value={currentPick.compartimento} />
+                        <InfoItem label={t('level')} value={currentPick.nivel} />
+                        <InfoItem label={t('position')} value={currentPick.posicao} />
+                        <InfoItem label={t('command')} value={currentPick.comando} />
                       </motion.div>
                     </div>
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.7 }}
-                      className="mt-6 pt-4 border-t border-outline-variant/30 flex justify-center items-center"
+                      className="mt-[10px] pt-[12px] flex justify-center items-center"
                     >
-                      <div className="flex flex-col items-center">
-                        <span className="text-[11px] uppercase font-extrabold text-outline tracking-widest">Status</span>
-                        <StatusBadge status={currentPick.status} />
-                      </div>
+                      <StatusBadge status={currentPick.status} t={t} />
                     </motion.div>
                   </div>
                 </div>
@@ -407,8 +493,8 @@ export default function App() {
                 className="bg-tertiary h-64 rounded-xl flex flex-col items-center justify-center text-white shadow-xl border-4 border-white/20"
               >
                 <CheckCircle2 size={80} className="mb-4" />
-                <h2 className="text-6xl font-black tracking-tighter uppercase italic">CONCLUÍDO</h2>
-                <p className="text-white/80 font-bold uppercase tracking-[0.3em] mt-2">Onda finalizada com sucesso</p>
+                <h2 className="text-6xl font-black tracking-tighter uppercase italic">{t('concluido_banner')}</h2>
+                <p className="text-white/80 font-bold uppercase tracking-[0.3em] mt-2">{t('onda_finalizada')}</p>
               </motion.div>
             ) : (
               <motion.div 
@@ -419,7 +505,7 @@ export default function App() {
                 className="bg-surface-container-low rounded-xl border-2 border-dashed border-outline-variant h-64 flex flex-col items-center justify-center text-outline gap-2"
               >
                 <Package size={48} strokeWidth={1} />
-                <p className="font-bold uppercase tracking-widest text-sm">Nenhuma coleta ativa</p>
+                <p className="font-bold uppercase tracking-widest text-sm">{t('empty_list')}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -428,18 +514,18 @@ export default function App() {
         {/* Pick List Section */}
         <section className="flex-1 flex flex-col gap-3 min-h-0 pb-4">
           <div className="flex items-center justify-between shrink-0">
-            <h2 className="text-xs font-extrabold uppercase tracking-[0.3em] text-on-surface-variant">Próximas Coletas (Pick List)</h2>
+            <h2 className="text-xs font-extrabold uppercase tracking-[0.3em] text-on-surface-variant">{t('pick_list')}</h2>
             <span className="text-xs font-extrabold text-outline uppercase mono tracking-widest">
-              {totalCount - completedCount} Itens Restantes
+              {totalCount - completedCount} {t('items_count')}
             </span>
           </div>
           <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-2 custom-scrollbar min-h-0">
             {sortedPicks.map((pick) => (
-              <PickListItem key={pick.id} pick={pick} isActive={currentPick?.id === pick.id} />
+              <PickListItem key={pick.id} pick={pick} isActive={currentPick?.id === pick.id} t={t} />
             ))}
             {sortedPicks.length === 0 && (
               <div className="text-center py-12 text-outline uppercase tracking-widest text-xs font-bold">
-                Lista de coleta vazia
+                {t('empty_list')}
               </div>
             )}
           </div>
@@ -449,15 +535,15 @@ export default function App() {
       {/* Modals */}
       <AnimatePresence>
         {showSettings && (
-          <Modal title="Configurações do Sistema" onClose={() => setShowSettings(false)}>
+          <Modal title={t('settings_title')} onClose={() => setShowSettings(false)}>
             {!isAuth ? (
               <div className="flex flex-col gap-4">
-                <p className="text-sm text-on-surface-variant">Insira a senha para acessar as configurações do Truck e Banco de Dados.</p>
+                <p className="text-sm text-on-surface-variant">{t('auth_prompt')}</p>
                 <input 
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Senha"
+                  placeholder={t('password_placeholder')}
                   className="bg-surface-container p-3 rounded-lg border-none focus:ring-2 focus:ring-primary font-mono"
                   onKeyDown={(e) => e.key === 'Enter' && handleSettingsAuth()}
                 />
@@ -465,17 +551,17 @@ export default function App() {
                   onClick={handleSettingsAuth}
                   className="bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary/90 transition-colors"
                 >
-                  ACESSAR
+                  {t('access_btn')}
                 </button>
               </div>
             ) : (
               <div className="flex flex-col gap-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="flex flex-col gap-4">
                   <h3 className="text-sm font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
-                    <Truck size={16} /> Identificação
+                    <Truck size={16} /> {t('identification')}
                   </h3>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-extrabold uppercase text-outline">ID do Truck</label>
+                    <label className="text-xs font-extrabold uppercase text-outline">{t('truck_id_setting')}</label>
                     <input 
                       type="text" 
                       value={truckId}
@@ -487,16 +573,16 @@ export default function App() {
 
                 <div className="flex flex-col gap-4 pt-4 border-t border-outline-variant/20">
                   <h3 className="text-sm font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
-                    <Database size={16} /> SQL Server
+                    <Database size={16} /> {t('sql_server')}
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label="Servidor (Host)" value={sqlConfig.server} onChange={(v) => setSqlConfig({...sqlConfig, server: v})} />
-                    <InputGroup label="Banco de Dados" value={sqlConfig.database} onChange={(v) => setSqlConfig({...sqlConfig, database: v})} />
-                    <InputGroup label="Usuário" value={sqlConfig.user} onChange={(v) => setSqlConfig({...sqlConfig, user: v})} />
-                    <InputGroup label="Senha" type="password" value={sqlConfig.password} onChange={(v) => setSqlConfig({...sqlConfig, password: v})} />
+                    <InputGroup label={t('host_label')} value={sqlConfig.server} onChange={(v) => setSqlConfig({...sqlConfig, server: v})} />
+                    <InputGroup label={t('database_label')} value={sqlConfig.database} onChange={(v) => setSqlConfig({...sqlConfig, database: v})} />
+                    <InputGroup label={t('user_label')} value={sqlConfig.user} onChange={(v) => setSqlConfig({...sqlConfig, user: v})} />
+                    <InputGroup label={t('password_label')} type="password" value={sqlConfig.password} onChange={(v) => setSqlConfig({...sqlConfig, password: v})} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-extrabold uppercase text-outline tracking-widest">Query SQL (SELECT)</label>
+                    <label className="text-[11px] font-extrabold uppercase text-outline tracking-widest">{t('sql_query_label')}</label>
                     <textarea 
                       value={sqlQuery}
                       onChange={(e) => setSqlQuery(e.target.value)}
@@ -507,7 +593,7 @@ export default function App() {
                 </div>
 
                 <div className="flex flex-col gap-4 pt-4 border-t border-outline-variant/20">
-                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-secondary">Mapeamento de Colunas</h3>
+                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-secondary">{t('column_mapping')}</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {Object.keys(sqlMapping).map((key) => (
                       <div key={key}>
@@ -525,7 +611,7 @@ export default function App() {
                   onClick={() => setShowSettings(false)}
                   className="bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg mt-4"
                 >
-                  SALVAR CONFIGURAÇÕES
+                  {t('save_settings')}
                 </button>
               </div>
             )}
@@ -544,6 +630,7 @@ export default function App() {
             sqlConfig={sqlConfig}
             sqlQuery={sqlQuery}
             sqlMapping={sqlMapping}
+            t={t}
           />
         )}
       </AnimatePresence>
@@ -568,25 +655,32 @@ function InfoItem({ label, value }: { label: string, value: string }) {
   );
 }
 
-function StatusBadge({ status }: { status: PickStatus }) {
+function StatusBadge({ status, t }: { status: PickStatus, t: any }) {
   const styles = {
     'Deslocando': 'bg-error text-white',
-    'Aguardando coleta': 'bg-tertiary text-white animate-pulse',
+    'Aguardando coleta': 'animate-status-swap shadow-[0_0_15px_rgba(0,96,64,0.4)]',
     'CONCLUIDO': 'bg-tertiary text-white',
     'CANCELADO': 'bg-outline text-white'
   };
 
+  const labels = {
+    'Deslocando': t('moving'),
+    'Aguardando coleta': t('waiting'),
+    'CONCLUIDO': t('completed'),
+    'CANCELADO': t('cancelled')
+  };
+
   return (
     <span className={cn(
-      "text-xs font-extrabold px-3 py-1.5 rounded mono uppercase mt-1 tracking-tight transition-colors duration-500",
+      "text-2xl font-black px-8 py-3 rounded-xl mono uppercase mt-2 tracking-tighter transition-all duration-500 shadow-lg border-2 border-white/20",
       styles[status]
     )}>
-      {status}
+      {labels[status]}
     </span>
   );
 }
 
-const PickListItem: React.FC<{ pick: PickItem, isActive: boolean }> = ({ pick, isActive }) => {
+const PickListItem: React.FC<{ pick: PickItem, isActive: boolean, t: any }> = ({ pick, isActive, t }) => {
   const isCompleted = pick.status === 'CONCLUIDO';
   const isCancelled = pick.status === 'CANCELADO';
   const isWaiting = pick.status === 'Aguardando coleta';
@@ -597,7 +691,7 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean }> = ({ pick, i
     if (isActive && itemRef.current) {
       itemRef.current.scrollIntoView({
         behavior: 'smooth',
-        block: 'nearest'
+        block: 'center'
       });
     }
   }, [isActive]);
@@ -606,7 +700,7 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean }> = ({ pick, i
     <div 
       ref={itemRef}
       className={cn(
-        "rounded-lg border-l-4 py-4 px-5 flex items-center justify-between shadow-sm transition-all",
+        "rounded-lg border-l-4 py-0.5 px-5 flex items-center justify-between shadow-sm transition-all",
         // Background and border colors based on status/active
         isCompleted && "bg-tertiary/10 border-tertiary opacity-90",
         isCancelled && "bg-error/10 border-error opacity-80",
@@ -616,7 +710,7 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean }> = ({ pick, i
     >
       <div className="flex items-center gap-5">
         <div className={cn(
-          "px-3 py-1.5 rounded font-display text-xs font-black tracking-tighter",
+          "px-5 py-3 rounded font-display text-[clamp(1.25rem,3.5vw,2.5rem)] font-black tracking-tighter leading-none shadow-inner",
           isCompleted ? "bg-tertiary/20 text-tertiary" : 
           isCancelled ? "bg-error/20 text-error" :
           isActive ? "bg-yellow-400/30 text-yellow-700" :
@@ -626,18 +720,43 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean }> = ({ pick, i
         </div>
         <div className="flex flex-col">
           <h3 className={cn(
-            "font-extrabold text-lg leading-none tracking-tight", 
+            "font-extrabold text-[clamp(1.1rem,2.8vw,1.8rem)] leading-tight tracking-tight", 
             (isCompleted || isCancelled) && "text-on-surface-variant"
           )}>
-            {pick.productName}
+            {t(pick.productName as any)}
           </h3>
-          <span className="text-[10px] text-outline mt-1 mono">{pick.timestamp}</span>
         </div>
       </div>
       <div className="flex items-center gap-8">
-        <div className="hidden sm:flex gap-6 text-[10px] font-tech font-bold tracking-wider">
-          <span className="text-outline uppercase">POS: <span className="text-on-surface font-black">{pick.area}-{pick.zona}-{pick.corredor}-{pick.compartimento}-{pick.nivel}-{pick.posicao}</span></span>
-          <span className="text-outline uppercase">CMD: <span className="text-on-surface font-black">{pick.comando}</span></span>
+        <div className="hidden sm:flex gap-3">
+          <div className="flex flex-col">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('area')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.area}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('zone')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.zona}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('aisle')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.corredor}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('comp')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.compartimento}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('level')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.nivel}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('position')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.posicao}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('command')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.comando}</span>
+          </div>
         </div>
         {isCompleted ? (
           <CheckCircle2 className="text-tertiary" size={24} fill="currentColor" fillOpacity={0.2} />
@@ -693,7 +812,8 @@ function SimulationModal({
   truckId,
   sqlConfig,
   sqlQuery,
-  sqlMapping
+  sqlMapping,
+  t
 }: { 
   onClose: () => void, 
   onAddWave: (w: Wave) => void,
@@ -704,7 +824,8 @@ function SimulationModal({
   truckId: string,
   sqlConfig: any,
   sqlQuery: string,
-  sqlMapping: any
+  sqlMapping: any,
+  t: any
 }) {
   const [mode, setMode] = useState<'list' | 'create' | 'manual' | 'sql'>('list');
   const [waveName, setWaveName] = useState(`ONDA-${format(new Date(), 'HHmm')}`);
@@ -857,7 +978,7 @@ function SimulationModal({
             <div className="bg-primary p-2 rounded-lg text-white">
               <Play size={20} fill="currentColor" />
             </div>
-            <h2 className="text-xl font-extrabold tracking-tight uppercase">Simulador de Operação</h2>
+            <h2 className="text-xl font-extrabold tracking-tight uppercase">{t('sim_modal_title')}</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-surface-container rounded-full transition-colors">
             <X size={20} />
@@ -866,10 +987,10 @@ function SimulationModal({
 
         <div className="flex-1 overflow-y-auto p-6">
           <div className="flex gap-2 mb-6">
-            <TabButton active={mode === 'list'} onClick={() => setMode('list')}>ONDAS SALVAS</TabButton>
-            <TabButton active={mode === 'create'} onClick={() => setMode('create')}>GERADOR AUTO</TabButton>
-            <TabButton active={mode === 'manual'} onClick={() => setMode('manual')}>ENTRADA MANUAL</TabButton>
-            <TabButton active={mode === 'sql'} onClick={() => setMode('sql')}>SQL SERVER</TabButton>
+            <TabButton active={mode === 'list'} onClick={() => setMode('list')}>{t('saved_waves')}</TabButton>
+            <TabButton active={mode === 'create'} onClick={() => setMode('create')}>{t('auto_generator')}</TabButton>
+            <TabButton active={mode === 'manual'} onClick={() => setMode('manual')}>{t('manual_entry')}</TabButton>
+            <TabButton active={mode === 'sql'} onClick={() => setMode('sql')}>{t('sql_server_tab')}</TabButton>
           </div>
 
           {mode === 'list' ? (
@@ -877,7 +998,7 @@ function SimulationModal({
               {waves.length === 0 ? (
                 <div className="text-center py-12 text-outline flex flex-col items-center gap-2">
                   <RotateCcw size={40} strokeWidth={1} />
-                  <p className="font-bold uppercase tracking-widest text-xs">Nenhuma onda cadastrada</p>
+                  <p className="font-bold uppercase tracking-widest text-xs">{t('no_waves')}</p>
                 </div>
               ) : (
                 waves.map(w => (
@@ -897,15 +1018,15 @@ function SimulationModal({
                       </div>
                       <div>
                         <p className="font-extrabold text-on-surface">{w.name}</p>
-                        <p className="text-[10px] text-outline mono uppercase">{w.picks.length} ITENS | {format(new Date(w.createdAt), 'dd/MM HH:mm')}</p>
+                        <p className="text-[10px] text-outline mono uppercase">{w.picks.length} {t('items_count')} | {format(new Date(w.createdAt), 'dd/MM HH:mm')}</p>
                       </div>
                     </button>
                     <div className="flex items-center gap-2">
-                      {activeWaveId === w.id && <div className="bg-primary text-white text-[10px] px-2 py-1 rounded font-bold uppercase">ATIVO</div>}
+                      {activeWaveId === w.id && <div className="bg-primary text-white text-[10px] px-2 py-1 rounded font-bold uppercase">{t('active_badge')}</div>}
                       <button 
                         onClick={(e) => { e.stopPropagation(); onDeleteWave(w.id); }}
                         className="p-2 text-outline hover:text-error hover:bg-error/10 rounded-lg transition-colors"
-                        title="Excluir Onda"
+                        title={t('delete_wave')}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -917,8 +1038,8 @@ function SimulationModal({
           ) : mode === 'create' ? (
             <div className="flex flex-col gap-6">
               <div className="grid grid-cols-2 gap-4">
-                <InputGroup label="Nome da Onda" value={waveName} onChange={setWaveName} />
-                <InputGroup label="Qtd. Coletas" type="number" value={numPicks} onChange={(v) => setNumPicks(v === "" ? 0 : parseInt(v))} />
+                <InputGroup label={t('wave_name_label')} value={waveName} onChange={setWaveName} />
+                <InputGroup label={t('num_items_label')} type="number" value={numPicks} onChange={(v) => setNumPicks(v === "" ? 0 : parseInt(v))} />
               </div>
 
               <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/30">
@@ -926,9 +1047,9 @@ function SimulationModal({
                   <ArrowRight size={14} /> Parâmetros de Localização
                 </h4>
                 <div className="grid grid-cols-3 gap-3">
-                  <RangeInfo label="Área" value="RK" />
-                  <RangeInfo label="Zona" value="0" />
-                  <RangeInfo label="Nível" value="01-08" />
+                  <RangeInfo label={t('area')} value="RK" />
+                  <RangeInfo label={t('zone')} value="0" />
+                  <RangeInfo label={t('level')} value="01-08" />
                 </div>
               </div>
 
@@ -936,58 +1057,59 @@ function SimulationModal({
                 onClick={handleGenerate}
                 className="bg-primary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg active:scale-95"
               >
-                <Save size={20} /> GERAR E SALVAR ONDA
+                <Save size={20} /> {t('generate_wave_btn')}
               </button>
             </div>
           ) : mode === 'manual' ? (
             <div className="flex flex-col gap-6">
               <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/30 flex flex-col gap-4">
-                <h3 className="text-sm font-extrabold uppercase tracking-widest text-primary">Novo Item de Coleta</h3>
+                <h3 className="text-sm font-extrabold uppercase tracking-widest text-primary">{t('add_manual_title')}</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <SelectGroup 
-                    label="Produto" 
+                    label={t('select_product')} 
                     value={currentManualPick.productName || ""} 
                     onChange={(v) => setCurrentManualPick({...currentManualPick, productName: v})}
                     options={SAMPLE_PRODUCTS.map(p => p.name)}
+                    t={t}
                   />
                   <SelectGroup 
-                    label="Área" 
+                    label={t('area')} 
                     value={currentManualPick.area || ""} 
                     onChange={(v) => setCurrentManualPick({...currentManualPick, area: v})}
                     options={["RK", "WH", "ST"]}
                   />
                   <SelectGroup 
-                    label="Zona" 
+                    label={t('zone')} 
                     value={currentManualPick.zona || ""} 
                     onChange={(v) => setCurrentManualPick({...currentManualPick, zona: v})}
                     options={["0", "1", "2", "3", "4"]}
                   />
                   <SelectGroup 
-                    label="Corredor" 
+                    label={t('aisle')} 
                     value={currentManualPick.corredor || ""} 
                     onChange={(v) => setCurrentManualPick({...currentManualPick, corredor: v})}
                     options={["001", "002", "003", "004", "005"]}
                   />
                   <SelectGroup 
-                    label="Compart." 
+                    label={t('comp')} 
                     value={currentManualPick.compartimento || ""} 
                     onChange={(v) => setCurrentManualPick({...currentManualPick, compartimento: v})}
                     options={Array.from({length: 20}, (_, i) => (i+1).toString().padStart(3, '0'))}
                   />
                   <SelectGroup 
-                    label="Nível" 
+                    label={t('level')} 
                     value={currentManualPick.nivel || ""} 
                     onChange={(v) => setCurrentManualPick({...currentManualPick, nivel: v})}
                     options={Array.from({length: 8}, (_, i) => (i+1).toString().padStart(2, '0'))}
                   />
                   <SelectGroup 
-                    label="Posição" 
+                    label={t('posicao')} 
                     value={currentManualPick.posicao || ""} 
                     onChange={(v) => setCurrentManualPick({...currentManualPick, posicao: v})}
                     options={["01", "02"]}
                   />
                   <SelectGroup 
-                    label="Comando" 
+                    label={t('comando')} 
                     value={currentManualPick.comando || ""} 
                     onChange={(v) => setCurrentManualPick({...currentManualPick, comando: v})}
                     options={["P", "D"]}
@@ -997,18 +1119,20 @@ function SimulationModal({
                   onClick={handleAddManualPick}
                   className="bg-secondary text-white py-2 rounded-lg font-bold text-sm hover:bg-secondary/90 transition-colors mt-2"
                 >
-                  ADICIONAR ITEM À LISTA
+                  {t('add_item_btn')}
                 </button>
               </div>
 
               <div className="flex flex-col gap-2">
-                <h4 className="text-xs font-extrabold uppercase text-outline tracking-widest">Itens na Onda Atual ({manualPicks.length})</h4>
+                <h4 className="text-xs font-extrabold uppercase text-outline tracking-widest">{t('items_selected')} ({manualPicks.length})</h4>
                 <div className="max-h-48 overflow-y-auto flex flex-col gap-2 pr-2 no-scrollbar">
-                  {manualPicks.map((p, idx) => (
+                  {manualPicks.length === 0 ? (
+                    <p className="text-center py-4 text-outline text-[10px] uppercase font-bold">{t('no_items_added')}</p>
+                  ) : manualPicks.map((p, idx) => (
                     <div key={idx} className="bg-surface-container p-3 rounded-lg flex justify-between items-center">
                       <div className="flex items-center gap-3">
                         <span className="mono text-xs font-bold text-primary">#{idx+1}</span>
-                        <span className="font-bold text-sm">{p.productName}</span>
+                        <span className="font-bold text-sm">{t(p.productName as any)}</span>
                       </div>
                       <span className="mono text-[10px] text-outline">{p.area}-{p.zona}-{p.corredor}-{p.compartimento}</span>
                     </div>
@@ -1017,13 +1141,13 @@ function SimulationModal({
               </div>
 
               <div className="flex flex-col gap-4 pt-4 border-t border-outline-variant/20">
-                <InputGroup label="Nome da Onda" value={waveName} onChange={setWaveName} />
+                <InputGroup label={t('wave_name_label')} value={waveName} onChange={setWaveName} />
                 <button 
                   onClick={handleSaveManualWave}
                   disabled={manualPicks.length === 0}
                   className="bg-primary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg disabled:opacity-50"
                 >
-                  <Save size={20} /> SALVAR ONDA MANUAL
+                  <Save size={20} /> {t('save_manual_btn')}
                 </button>
               </div>
             </div>
@@ -1031,33 +1155,33 @@ function SimulationModal({
             <div className="flex flex-col gap-6">
               <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/30 flex flex-col gap-4">
                 <h3 className="text-sm font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
-                  <Database size={16} /> Gerar Onda via SQL Server
+                  <Database size={16} /> {t('sql_server_tab')}
                 </h3>
                 <p className="text-xs text-outline">
-                  Utiliza as configurações definidas no menu de <strong>Setup</strong> para buscar dados e gerar uma nova onda de coleta.
+                  {t('sql_server_desc')}
                 </p>
                 
                 <div className="bg-surface-container p-4 rounded-lg border border-outline-variant/20">
-                  <p className="text-[10px] uppercase font-bold text-outline mb-1">Query Atual:</p>
+                  <p className="text-[10px] uppercase font-bold text-outline mb-1">{t('sql_query_current')}</p>
                   <code className="text-[10px] mono text-on-surface-variant break-all">{sqlQuery}</code>
                 </div>
               </div>
 
               {sqlError && (
                 <div className="bg-error/10 border border-error/20 p-4 rounded-xl text-error text-xs font-bold">
-                  ERRO: {sqlError}
+                  {t('sql_error_prefix')}: {sqlError}
                 </div>
               )}
 
               <div className="flex flex-col gap-4 pt-4 border-t border-outline-variant/20">
-                <InputGroup label="Nome da Onda" value={waveName} onChange={setWaveName} />
+                <InputGroup label={t('wave_name_label')} value={waveName} onChange={setWaveName} />
                 <button 
                   onClick={handleSqlGenerate}
                   disabled={isTestingSql || !sqlConfig.server}
                   className="bg-primary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg disabled:opacity-50"
                 >
                   {isTestingSql ? <RotateCcw className="animate-spin" size={20} /> : <Database size={20} />} 
-                  {isTestingSql ? "CONECTANDO..." : "BUSCAR DADOS E GERAR ONDA"}
+                  {isTestingSql ? t('connecting') : t('fetch_sql_btn')}
                 </button>
               </div>
             </div>
@@ -1098,7 +1222,7 @@ function InputGroup({ label, value, onChange, type = "text" }: { label: string, 
   );
 }
 
-function SelectGroup({ label, value, onChange, options }: { label: string, value: string, onChange: (v: string) => void, options: string[] }) {
+function SelectGroup({ label, value, onChange, options, t }: { label: string, value: string, onChange: (v: string) => void, options: string[], t?: any }) {
   return (
     <div className="flex flex-col gap-1">
       <label className="text-[11px] font-extrabold uppercase text-outline tracking-widest">{label}</label>
@@ -1107,7 +1231,11 @@ function SelectGroup({ label, value, onChange, options }: { label: string, value
         onChange={(e) => onChange(e.target.value)}
         className="bg-surface-container p-2 rounded-lg border-none focus:ring-2 focus:ring-primary font-bold text-sm"
       >
-        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        {options.map(opt => (
+          <option key={opt} value={opt}>
+            {t ? t(opt as any) : opt}
+          </option>
+        ))}
       </select>
     </div>
   );

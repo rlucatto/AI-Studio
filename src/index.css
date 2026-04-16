@@ -54,6 +54,19 @@
   --color-on-secondary-fixed-variant: #38485d;
   --color-on-primary: #ffffff;
   --color-surface-dim: #d8dadc;
+
+  --animate-status-swap: status-swap 0.8s ease-in-out infinite alternate;
+
+  @keyframes status-swap {
+    0% {
+      background-color: var(--color-tertiary);
+      color: white;
+    }
+    100% {
+      background-color: white;
+      color: var(--color-tertiary);
+    }
+  }
 }
 
 @layer base {
