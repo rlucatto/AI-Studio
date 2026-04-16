@@ -27,16 +27,18 @@ import { format } from 'date-fns';
 import { cn, formatOrderId, formatSequence } from './lib/utils';
 import { PickItem, PickStatus, Wave } from './types';
 import { Language, translations } from './i18n';
+import logo from './assets/LogCHPGAJ.png';
 
 // Constants
 const DEFAULT_PASSWORD = "1234";
+
 const STATUS_CYCLE: PickStatus[] = ['Deslocando', 'Aguardando coleta', 'CONCLUIDO'];
 const CYCLE_TIME = 3000; // 3 seconds per state
 
 const SAMPLE_PRODUCTS = [
   { name: "Smartwatch Pro Gen-T", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80" },
   { name: "Headphone Studio ANC", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80" },
-  { name: "Powerbank X-Series 20k", image: "https://images.unsplash.com/photo-1609091839311-d536801027d3?w=800&q=80" },
+  { name: "Caixa de Som BassMax", image: "https://picsum.photos/seed/bassmax/800/800" },
   { name: "Relógio Classic Leather", image: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=800&q=80" },
   { name: "Teclado Mecânico K1", image: "https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=800&q=80" },
   { name: "Mouse Gamer RGB", image: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=800&q=80" },
@@ -81,6 +83,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showSimModal, setShowSimModal] = useState(false);
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
   const [isAuth, setIsAuth] = useState(false);
   const [timeLeft, setTimeLeft] = useState(862); // 14:22 in seconds
   const [isHolding, setIsHolding] = useState(false);
@@ -118,7 +121,38 @@ export default function App() {
     };
   });
   const [isTestingSql, setIsTestingSql] = useState(false);
+  const [isSqlConnected, setIsSqlConnected] = useState(false);
+  const [showSqlConfigModal, setShowSqlConfigModal] = useState(false);
   const [sqlError, setSqlError] = useState<string | null>(null);
+  const [sqlSuccess, setSqlSuccess] = useState<string | null>(null);
+
+  const handleTestConnection = async () => {
+    setIsTestingSql(true);
+    setSqlError(null);
+    setSqlSuccess(null);
+    setIsSqlConnected(false);
+
+    try {
+      const response = await fetch('/api/sql-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: sqlConfig })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setIsSqlConnected(true);
+        setSqlSuccess(t('connection_success'));
+      } else {
+        setSqlError(result.error || t('connection_error'));
+      }
+    } catch (err: any) {
+      setSqlError(err.message || t('connection_error'));
+    } finally {
+      setIsTestingSql(false);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('wms_sql_config', JSON.stringify(sqlConfig));
@@ -259,8 +293,9 @@ export default function App() {
     if (password === DEFAULT_PASSWORD) {
       setIsAuth(true);
       setPassword("");
+      setPasswordError(false);
     } else {
-      alert(t('wrong_password'));
+      setPasswordError(true);
     }
   };
 
@@ -280,7 +315,7 @@ export default function App() {
         {/* Header */}
         <header className="bg-surface-container-low h-14 w-full border-b border-outline-variant/20 flex items-center px-6 shrink-0">
           <div className="flex-1 flex items-center gap-4">
-            <span className="text-xs font-extrabold font-tech text-primary uppercase tracking-widest">{t('truck_id_label')}: {truckId}</span>
+            <span className="text-xs font-extrabold font-tech text-primary uppercase tracking-widest">{t('truck_id_label')} {truckId}</span>
             <div className="flex bg-surface-container p-1 rounded-lg border border-outline-variant/20">
               <button 
                 onClick={() => setLang('pt')}
@@ -303,11 +338,16 @@ export default function App() {
             </div>
           </div>
           <div className="flex-1 flex justify-center">
-            <span className="text-sm font-black text-on-surface-variant uppercase tracking-[0.2em] font-display">CHP Soluções</span>
+            <img 
+              src={logo} 
+              alt="CHP GAJ" 
+              className="h-10 w-auto object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div className="flex-1 flex justify-end">
             <button 
-              onClick={() => { setShowSettings(true); setIsAuth(false); }}
+              onClick={() => { setShowSettings(true); setIsAuth(false); setPasswordError(false); setPassword(""); }}
               className="p-2 rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant"
             >
               <Settings size={20} />
@@ -537,23 +577,40 @@ export default function App() {
         {showSettings && (
           <Modal title={t('settings_title')} onClose={() => setShowSettings(false)}>
             {!isAuth ? (
-              <div className="flex flex-col gap-4">
-                <p className="text-sm text-on-surface-variant">{t('auth_prompt')}</p>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t('password_placeholder')}
-                  className="bg-surface-container p-3 rounded-lg border-none focus:ring-2 focus:ring-primary font-mono"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSettingsAuth()}
-                />
-                <button 
-                  onClick={handleSettingsAuth}
-                  className="bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary/90 transition-colors"
+          <div className="flex-1 flex flex-col gap-4">
+            <p className="text-sm text-on-surface-variant">{t('auth_prompt')}</p>
+            <div className="flex flex-col gap-1">
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordError) setPasswordError(false);
+                }}
+                placeholder={t('password_placeholder')}
+                className={cn(
+                  "bg-surface-container p-3 rounded-lg border-2 focus:ring-0 font-mono transition-all",
+                  passwordError ? "border-error text-error" : "border-transparent focus:border-primary"
+                )}
+                onKeyDown={(e) => e.key === 'Enter' && handleSettingsAuth()}
+              />
+              {passwordError && (
+                <motion.span 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-[10px] font-bold text-error uppercase tracking-wider ml-1"
                 >
-                  {t('access_btn')}
-                </button>
-              </div>
+                  {t('wrong_password')}
+                </motion.span>
+              )}
+            </div>
+            <button 
+              onClick={handleSettingsAuth}
+              className="bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary/90 transition-colors"
+            >
+              {t('access_btn')}
+            </button>
+          </div>
             ) : (
               <div className="flex flex-col gap-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="flex flex-col gap-4">
@@ -576,34 +633,34 @@ export default function App() {
                     <Database size={16} /> {t('sql_server')}
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label={t('host_label')} value={sqlConfig.server} onChange={(v) => setSqlConfig({...sqlConfig, server: v})} />
-                    <InputGroup label={t('database_label')} value={sqlConfig.database} onChange={(v) => setSqlConfig({...sqlConfig, database: v})} />
-                    <InputGroup label={t('user_label')} value={sqlConfig.user} onChange={(v) => setSqlConfig({...sqlConfig, user: v})} />
-                    <InputGroup label={t('password_label')} type="password" value={sqlConfig.password} onChange={(v) => setSqlConfig({...sqlConfig, password: v})} />
+                    <InputGroup label={t('host_label')} value={sqlConfig.server} onChange={(v) => { setSqlConfig({...sqlConfig, server: v}); setIsSqlConnected(false); }} />
+                    <InputGroup label={t('database_label')} value={sqlConfig.database} onChange={(v) => { setSqlConfig({...sqlConfig, database: v}); setIsSqlConnected(false); }} />
+                    <InputGroup label={t('user_label')} value={sqlConfig.user} onChange={(v) => { setSqlConfig({...sqlConfig, user: v}); setIsSqlConnected(false); }} />
+                    <InputGroup label={t('password_label')} type="password" value={sqlConfig.password} onChange={(v) => { setSqlConfig({...sqlConfig, password: v}); setIsSqlConnected(false); }} />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-extrabold uppercase text-outline tracking-widest">{t('sql_query_label')}</label>
-                    <textarea 
-                      value={sqlQuery}
-                      onChange={(e) => setSqlQuery(e.target.value)}
-                      className="bg-surface-container p-3 rounded-lg border-none focus:ring-2 focus:ring-primary font-mono text-xs h-24 resize-none"
-                      placeholder="SELECT * FROM ..."
-                    />
-                  </div>
-                </div>
+                  
+                  {sqlError && <p className="text-[10px] text-error font-bold bg-error/10 p-2 rounded">{sqlError}</p>}
+                  {sqlSuccess && <p className="text-[10px] text-primary font-bold bg-primary/10 p-2 rounded">{sqlSuccess}</p>}
 
-                <div className="flex flex-col gap-4 pt-4 border-t border-outline-variant/20">
-                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-secondary">{t('column_mapping')}</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.keys(sqlMapping).map((key) => (
-                      <div key={key}>
-                        <InputGroup 
-                          label={key} 
-                          value={(sqlMapping as any)[key]} 
-                          onChange={(v) => setSqlMapping({...sqlMapping, [key]: v})} 
-                        />
-                      </div>
-                    ))}
+                  <div className="flex flex-col gap-2 mt-2">
+                    <button 
+                      onClick={handleTestConnection}
+                      disabled={isTestingSql || !sqlConfig.server}
+                      className="bg-secondary text-white py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-secondary/90 disabled:opacity-50 transition-all"
+                    >
+                      {isTestingSql ? <RotateCcw className="animate-spin" size={16} /> : <Database size={16} />}
+                      {isTestingSql ? t('connecting_status') : t('test_connection_btn')}
+                    </button>
+
+                    {isSqlConnected && (
+                      <button 
+                        onClick={() => setShowSqlConfigModal(true)}
+                        className="bg-surface-container-highest text-primary py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-outline-variant/20 transition-all border-2 border-primary/20"
+                      >
+                        <Settings size={16} />
+                        {t('config_query_btn')}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -615,6 +672,44 @@ export default function App() {
                 </button>
               </div>
             )}
+          </Modal>
+        )}
+
+        {showSqlConfigModal && (
+          <Modal title={t('query_mapping_title')} onClose={() => setShowSqlConfigModal(false)}>
+            <div className="flex flex-col gap-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-extrabold uppercase text-outline tracking-widest">{t('sql_query_label')}</label>
+                <textarea 
+                  value={sqlQuery}
+                  onChange={(e) => setSqlQuery(e.target.value)}
+                  className="bg-surface-container p-3 rounded-lg border-none focus:ring-2 focus:ring-primary font-mono text-xs h-32 resize-none"
+                  placeholder="SELECT * FROM ..."
+                />
+              </div>
+
+              <div className="flex flex-col gap-4 pt-4 border-t border-outline-variant/20">
+                <h3 className="text-sm font-extrabold uppercase tracking-widest text-secondary">{t('column_mapping')}</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.keys(sqlMapping).map((key) => (
+                    <div key={key}>
+                      <InputGroup 
+                        label={key} 
+                        value={(sqlMapping as any)[key]} 
+                        onChange={(v) => setSqlMapping({...sqlMapping, [key]: v})} 
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setShowSqlConfigModal(false)}
+                className="bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg"
+              >
+                {t('save_settings')}
+              </button>
+            </div>
           </Modal>
         )}
 

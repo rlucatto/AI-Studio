@@ -13,6 +13,34 @@ async function startServer() {
 
   app.use(express.json());
 
+  // API Route for SQL Server Test Connection
+  app.post("/api/sql-test", async (req, res) => {
+    const { config } = req.body;
+
+    if (!config) {
+      return res.status(400).json({ error: "Config is required" });
+    }
+
+    try {
+      const pool = await sql.connect({
+        user: config.user,
+        password: config.password,
+        server: config.server,
+        database: config.database,
+        options: {
+          encrypt: true,
+          trustServerCertificate: true,
+        },
+      });
+      
+      await pool.close();
+      res.json({ status: "connected", message: "Successfully connected to SQL Server" });
+    } catch (err: any) {
+      console.error("SQL Connection Error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // API Route for SQL Server Query
   app.post("/api/sql-query", async (req, res) => {
     const { config, query } = req.body;
