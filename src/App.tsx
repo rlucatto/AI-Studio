@@ -460,12 +460,12 @@ export default function App() {
                   "border-primary"
                 )}
               >
-                <div className="flex flex-col md:flex-row">
+                <div className="flex flex-row">
                   <motion.div 
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="md:w-5/12 h-64 bg-surface-container flex flex-col items-center justify-center relative overflow-hidden"
+                    className="w-5/12 h-64 bg-surface-container flex flex-col items-center justify-center relative overflow-hidden"
                   >
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.5 }}
@@ -491,7 +491,7 @@ export default function App() {
                       <Clock size={12} className="text-white/70" />
                     </motion.div>
                   </motion.div>
-                  <div className="md:w-7/12 p-6 flex flex-col justify-start">
+                  <div className="w-7/12 p-6 flex flex-col justify-start">
                     <div>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex flex-col">
@@ -572,7 +572,7 @@ export default function App() {
           <div className="flex items-center justify-between shrink-0">
             <h2 className="text-xs font-extrabold uppercase tracking-[0.3em] text-on-surface-variant">{t('pick_list')}</h2>
           </div>
-          <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-[5px] pl-0 -ml-[19px] -mr-[16px] custom-scrollbar min-h-0">
+          <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-[5px] pl-0 -ml-[19px] -mr-[16px] no-scrollbar min-h-0">
             <AnimatePresence mode="popLayout" initial={false}>
               {sortedPicks.map((pick) => (
                 <PickListItem key={pick.id} pick={pick} isActive={currentPick?.id === pick.id} t={t} />
