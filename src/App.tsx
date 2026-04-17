@@ -29,13 +29,18 @@ import { PickItem, PickStatus, Wave } from './types';
 import { Language, translations } from './i18n';
 import logo from './assets/LogCHPGAJ.png';
 
+interface Product {
+  name: string;
+  image: string;
+}
+
 // Constants
 const DEFAULT_PASSWORD = "1234";
 
 const STATUS_CYCLE: PickStatus[] = ['Deslocando', 'Aguardando coleta', 'CONCLUIDO'];
 const CYCLE_TIME = 3000; // 3 seconds per state
 
-const SAMPLE_PRODUCTS = [
+const INITIAL_PRODUCTS: Product[] = [
   { name: "Smartwatch Pro Gen-T", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80" },
   { name: "Headphone Studio ANC", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80" },
   { name: "Cadeira Gamer Ergonômica", image: "https://images.unsplash.com/photo-1598550476439-6847785fce66?w=800&q=80" },
@@ -62,11 +67,19 @@ export default function App() {
   const [activeWaveId, setActiveWaveId] = useState<string | null>(() => {
     return localStorage.getItem('wms_active_wave_id');
   });
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('wms_products');
+    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+  });
 
   // Persistence Effects
   useEffect(() => {
     localStorage.setItem('wms_waves', JSON.stringify(waves));
   }, [waves]);
+
+  useEffect(() => {
+    localStorage.setItem('wms_products', JSON.stringify(products));
+  }, [products]);
 
   useEffect(() => {
     localStorage.setItem('wms_truck_id', truckId);
@@ -85,6 +98,9 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState(false);
   const [isAuth, setIsAuth] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'id' | 'sql' | 'items'>('id');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [newProduct, setNewProduct] = useState<Product>({ name: '', image: '' });
   const [timeLeft, setTimeLeft] = useState(862); // 14:22 in seconds
   const [isHolding, setIsHolding] = useState(false);
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('wms_lang') as Language) || 'pt');
@@ -555,9 +571,6 @@ export default function App() {
         <section className="flex-1 flex flex-col gap-3 min-h-0 pb-4">
           <div className="flex items-center justify-between shrink-0">
             <h2 className="text-xs font-extrabold uppercase tracking-[0.3em] text-on-surface-variant">{t('pick_list')}</h2>
-            <span className="text-xs font-extrabold text-outline uppercase mono tracking-widest">
-              {totalCount - completedCount} {t('items_count')}
-            </span>
           </div>
           <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-2 custom-scrollbar min-h-0">
             {sortedPicks.map((pick) => (
@@ -613,60 +626,206 @@ export default function App() {
           </div>
             ) : (
               <div className="flex flex-col gap-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-                <div className="flex flex-col gap-4">
-                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
-                    <Truck size={16} /> {t('identification')}
-                  </h3>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-extrabold uppercase text-outline">{t('truck_id_setting')}</label>
-                    <input 
-                      type="text" 
-                      value={truckId}
-                      onChange={(e) => setTruckId(e.target.value)}
-                      className="bg-surface-container p-3 rounded-lg border-none focus:ring-2 focus:ring-primary font-mono"
-                    />
-                  </div>
+                {/* Tabs */}
+                <div className="flex p-1 bg-surface-container rounded-xl gap-1 shrink-0">
+                  <button 
+                    onClick={() => setSettingsTab('id')}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-bold transition-all",
+                      settingsTab === 'id' ? "bg-primary text-white shadow-md" : "hover:bg-surface-container-high text-outline"
+                    )}
+                  >
+                    <Truck size={12} /> {t('identification')}
+                  </button>
+                  <button 
+                    onClick={() => setSettingsTab('items')}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-bold transition-all",
+                      settingsTab === 'items' ? "bg-primary text-white shadow-md" : "hover:bg-surface-container-high text-outline"
+                    )}
+                  >
+                    <Package size={12} /> {t('itens')}
+                  </button>
+                  <button 
+                    onClick={() => setSettingsTab('sql')}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-bold transition-all",
+                      settingsTab === 'sql' ? "bg-primary text-white shadow-md" : "hover:bg-surface-container-high text-outline"
+                    )}
+                  >
+                    <Database size={12} /> {t('sql_server')}
+                  </button>
                 </div>
 
-                <div className="flex flex-col gap-4 pt-4 border-t border-outline-variant/20">
-                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
-                    <Database size={16} /> {t('sql_server')}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label={t('host_label')} value={sqlConfig.server} onChange={(v) => { setSqlConfig({...sqlConfig, server: v}); setIsSqlConnected(false); }} />
-                    <InputGroup label={t('database_label')} value={sqlConfig.database} onChange={(v) => { setSqlConfig({...sqlConfig, database: v}); setIsSqlConnected(false); }} />
-                    <InputGroup label={t('user_label')} value={sqlConfig.user} onChange={(v) => { setSqlConfig({...sqlConfig, user: v}); setIsSqlConnected(false); }} />
-                    <InputGroup label={t('password_label')} type="password" value={sqlConfig.password} onChange={(v) => { setSqlConfig({...sqlConfig, password: v}); setIsSqlConnected(false); }} />
-                  </div>
-                  
-                  {sqlError && <p className="text-[10px] text-error font-bold bg-error/10 p-2 rounded">{sqlError}</p>}
-                  {sqlSuccess && <p className="text-[10px] text-primary font-bold bg-primary/10 p-2 rounded">{sqlSuccess}</p>}
-
-                  <div className="flex flex-col gap-2 mt-2">
-                    <button 
-                      onClick={handleTestConnection}
-                      disabled={isTestingSql || !sqlConfig.server}
-                      className="bg-secondary text-white py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-secondary/90 disabled:opacity-50 transition-all"
+                <div className="flex-1">
+                  {settingsTab === 'id' ? (
+                    <motion.div 
+                      key="id-tab"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex flex-col gap-4"
                     >
-                      {isTestingSql ? <RotateCcw className="animate-spin" size={16} /> : <Database size={16} />}
-                      {isTestingSql ? t('connecting_status') : t('test_connection_btn')}
-                    </button>
+                      <h3 className="text-sm font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Truck size={16} /> {t('identification')}
+                      </h3>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-extrabold uppercase text-outline">{t('truck_id_setting')}</label>
+                        <input 
+                          type="text" 
+                          value={truckId}
+                          onChange={(e) => setTruckId(e.target.value)}
+                          className="bg-surface-container p-3 rounded-lg border-none focus:ring-2 focus:ring-primary font-mono"
+                        />
+                      </div>
+                    </motion.div>
+                  ) : settingsTab === 'items' ? (
+                    <motion.div 
+                      key="items-tab"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex flex-col gap-6"
+                    >
+                      {/* Add New Product */}
+                      <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 flex flex-col gap-3">
+                        <h4 className="text-xs font-extrabold uppercase text-primary tracking-widest flex items-center gap-2">
+                          <Plus size={14} /> {t('add_new_item')}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <InputGroup 
+                            label={t('product_name_label')} 
+                            value={newProduct.name} 
+                            onChange={(v) => setNewProduct({...newProduct, name: v})} 
+                          />
+                          <InputGroup 
+                            label={t('product_image_label')} 
+                            value={newProduct.image} 
+                            onChange={(v) => setNewProduct({...newProduct, image: v})} 
+                          />
+                        </div>
+                        <button 
+                          onClick={() => {
+                            if (newProduct.name && newProduct.image) {
+                              setProducts([...products, newProduct]);
+                              setNewProduct({ name: '', image: '' });
+                            }
+                          }}
+                          disabled={!newProduct.name || !newProduct.image}
+                          className="bg-primary text-white py-2 rounded-lg font-bold text-xs hover:bg-primary/90 disabled:opacity-50 transition-all"
+                        >
+                          {t('add_item_btn')}
+                        </button>
+                      </div>
 
-                    {isSqlConnected && (
-                      <button 
-                        onClick={() => setShowSqlConfigModal(true)}
-                        className="bg-surface-container-highest text-primary py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-outline-variant/20 transition-all border-2 border-primary/20"
-                      >
-                        <Settings size={16} />
-                        {t('config_query_btn')}
-                      </button>
-                    )}
-                  </div>
+                      {/* Product List */}
+                      <div className="flex flex-col gap-3">
+                        <h4 className="text-xs font-extrabold uppercase text-outline tracking-widest">{t('itens')} ({products.length})</h4>
+                        <div className="flex flex-col gap-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                          {products.map((prod, idx) => (
+                            <div key={idx} className="bg-surface-container p-3 rounded-xl border border-outline-variant/20 flex items-center justify-between group">
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface shadow-sm shrink-0">
+                                  <img src={prod.image} alt={prod.name} className="w-full h-full object-cover" />
+                                </div>
+                                {editingProduct?.name === prod.name ? (
+                                  <div className="flex flex-col gap-2 flex-1">
+                                    <input 
+                                      className="bg-surface p-1 text-sm rounded border border-primary font-bold"
+                                      value={editingProduct.name}
+                                      onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
+                                    />
+                                    <input 
+                                      className="bg-surface p-1 text-[10px] rounded border border-outline font-mono"
+                                      value={editingProduct.image}
+                                      onChange={(e) => setEditingProduct({...editingProduct, image: e.target.value})}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <p className="font-bold text-on-surface text-sm">{prod.name}</p>
+                                    <p className="text-[10px] text-outline mono truncate max-w-[200px]">{prod.image}</p>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex gap-1 ml-2">
+                                {editingProduct?.name === prod.name ? (
+                                  <button 
+                                    onClick={() => {
+                                      const updated = [...products];
+                                      updated[idx] = editingProduct;
+                                      setProducts(updated);
+                                      setEditingProduct(null);
+                                    }}
+                                    className="p-2 bg-primary text-white rounded-lg"
+                                  >
+                                    <Save size={16} />
+                                  </button>
+                                ) : (
+                                  <button 
+                                    onClick={() => setEditingProduct(prod)}
+                                    className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                  >
+                                    <Settings size={16} />
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => setProducts(products.filter((_, i) => i !== idx))}
+                                  className="p-2 text-outline hover:text-error hover:bg-error/10 rounded-lg transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="sql-tab"
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex flex-col gap-4"
+                    >
+                      <h3 className="text-sm font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Database size={16} /> {t('sql_server')}
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <InputGroup label={t('host_label')} value={sqlConfig.server} onChange={(v) => { setSqlConfig({...sqlConfig, server: v}); setIsSqlConnected(false); }} />
+                        <InputGroup label={t('database_label')} value={sqlConfig.database} onChange={(v) => { setSqlConfig({...sqlConfig, database: v}); setIsSqlConnected(false); }} />
+                        <InputGroup label={t('user_label')} value={sqlConfig.user} onChange={(v) => { setSqlConfig({...sqlConfig, user: v}); setIsSqlConnected(false); }} />
+                        <InputGroup label={t('password_label')} type="password" value={sqlConfig.password} onChange={(v) => { setSqlConfig({...sqlConfig, password: v}); setIsSqlConnected(false); }} />
+                      </div>
+                      
+                      {sqlError && <p className="text-[10px] text-error font-bold bg-error/10 p-2 rounded">{sqlError}</p>}
+                      {sqlSuccess && <p className="text-[10px] text-primary font-bold bg-primary/10 p-2 rounded">{sqlSuccess}</p>}
+
+                      <div className="flex flex-col gap-2 mt-2">
+                        <button 
+                          onClick={handleTestConnection}
+                          disabled={isTestingSql || !sqlConfig.server}
+                          className="bg-secondary text-white py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-secondary/90 disabled:opacity-50 transition-all"
+                        >
+                          {isTestingSql ? <RotateCcw className="animate-spin" size={16} /> : <Database size={16} />}
+                          {isTestingSql ? t('connecting_status') : t('test_connection_btn')}
+                        </button>
+
+                        {isSqlConnected && (
+                          <button 
+                            onClick={() => setShowSqlConfigModal(true)}
+                            className="bg-surface-container-highest text-primary py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-outline-variant/20 transition-all border-2 border-primary/20"
+                          >
+                            <Settings size={16} />
+                            {t('config_query_btn')}
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
 
                 <button 
                   onClick={() => setShowSettings(false)}
-                  className="bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg mt-4"
+                  className="bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg mt-4 shrink-0"
                 >
                   {t('save_settings')}
                 </button>
@@ -725,6 +884,7 @@ export default function App() {
             sqlConfig={sqlConfig}
             sqlQuery={sqlQuery}
             sqlMapping={sqlMapping}
+            products={products}
             t={t}
           />
         )}
@@ -908,6 +1068,7 @@ function SimulationModal({
   sqlConfig,
   sqlQuery,
   sqlMapping,
+  products,
   t
 }: { 
   onClose: () => void, 
@@ -920,6 +1081,7 @@ function SimulationModal({
   sqlConfig: any,
   sqlQuery: string,
   sqlMapping: any,
+  products: Product[],
   t: any
 }) {
   const [mode, setMode] = useState<'list' | 'create' | 'manual' | 'sql'>('list');
@@ -939,16 +1101,16 @@ function SimulationModal({
     nivel: "01",
     posicao: "01",
     comando: "P",
-    productName: SAMPLE_PRODUCTS[0].name,
-    productImage: SAMPLE_PRODUCTS[0].image
+    productName: products[0].name,
+    productImage: products[0].image
   });
 
   const handleGenerate = () => {
-    // Shuffle products to ensure uniqueness if numPicks <= SAMPLE_PRODUCTS.length
-    const shuffledProducts = [...SAMPLE_PRODUCTS].sort(() => Math.random() - 0.5);
+    // Shuffle products to ensure uniqueness if numPicks <= products.length
+    const shuffledProducts = [...products].sort(() => Math.random() - 0.5);
     
     const newPicks: PickItem[] = Array.from({ length: numPicks }).map((_, i) => {
-      // Use modulo to wrap around if numPicks > SAMPLE_PRODUCTS.length
+      // Use modulo to wrap around if numPicks > products.length
       const product = shuffledProducts[i % shuffledProducts.length];
       return {
         id: Math.random().toString(36).substr(2, 9),
@@ -979,7 +1141,7 @@ function SimulationModal({
   };
 
   const handleAddManualPick = () => {
-    const product = SAMPLE_PRODUCTS.find(p => p.name === currentManualPick.productName) || SAMPLE_PRODUCTS[0];
+    const product = products.find(p => p.name === currentManualPick.productName) || products[0];
     const newPick: PickItem = {
       ...(currentManualPick as PickItem),
       id: Math.random().toString(36).substr(2, 9),
@@ -1021,7 +1183,7 @@ function SimulationModal({
       if (!Array.isArray(data)) throw new Error('Dados inválidos retornados');
 
       const newPicks: PickItem[] = data.map((row: any, i: number) => {
-        const product = SAMPLE_PRODUCTS[Math.floor(Math.random() * SAMPLE_PRODUCTS.length)];
+        const product = products[Math.floor(Math.random() * products.length)];
         return {
           id: Math.random().toString(36).substr(2, 9),
           orderId: String(row[sqlMapping.ORDER_ID] || formatOrderId(Math.floor(Math.random() * 1000000))),
@@ -1032,7 +1194,7 @@ function SimulationModal({
           corredor: String(row[sqlMapping.CORREDOR] || "001"),
           compartimento: String(row[sqlMapping.COMPARTIMENTO] || "001"),
           nivel: String(row[sqlMapping.NIVEL] || "01"),
-          posicao: String(row[sqlMapping.POSICAO] || "01"),
+          posicao: String(row[row[sqlMapping.POSICAO]] || "01"),
           comando: String(row[sqlMapping.COMANDO] || "P"),
           status: (row[sqlMapping.STATUS] as PickStatus) || 'Deslocando',
           productName: product.name,
@@ -1164,7 +1326,7 @@ function SimulationModal({
                     label={t('select_product')} 
                     value={currentManualPick.productName || ""} 
                     onChange={(v) => setCurrentManualPick({...currentManualPick, productName: v})}
-                    options={SAMPLE_PRODUCTS.map(p => p.name)}
+                    options={products.map(p => p.name)}
                     t={t}
                   />
                   <SelectGroup 
