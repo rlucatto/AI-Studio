@@ -326,8 +326,8 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen bg-surface-container-lowest flex flex-col font-body overflow-hidden items-center justify-center">
-      <div className="h-full w-full max-w-[1024px] bg-surface flex flex-col overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.1)] border-x border-outline-variant/20">
+    <div className="h-screen bg-surface-container-lowest flex flex-col font-body overflow-y-auto items-center no-scrollbar">
+      <div className="min-h-full w-full max-w-[1024px] bg-surface flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.1)] border-x border-outline-variant/20">
         {/* Header */}
         <header className="bg-surface-container-low h-14 w-full border-b border-outline-variant/20 flex items-center px-6 shrink-0">
           <div className="flex-1 flex items-center gap-4">
@@ -371,7 +371,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="flex-1 pb-8 px-6 w-full flex flex-col gap-6 overflow-hidden">
+        <main className="flex-1 pb-8 px-6 w-full flex flex-col gap-6 no-scrollbar">
         {/* Progress Section */}
         <section className="mt-4 flex flex-col gap-2 items-center text-center shrink-0">
           <div className="flex flex-col w-full max-w-2xl">
@@ -471,7 +471,7 @@ export default function App() {
                       initial={{ opacity: 0, scale: 0.5 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.3 }}
-                      className="absolute top-0 left-0 bg-primary text-white px-5 py-2 font-display text-4xl font-black tracking-tighter shadow-xl z-10 rounded-br-2xl border-r-4 border-b-4 border-white/20"
+                      className="absolute top-0 left-0 bg-primary text-white min-w-[2.5ch] h-auto px-4 py-2 font-display text-4xl font-black tracking-tighter shadow-xl z-10 rounded-br-2xl border-r-4 border-b-4 border-white/20 flex items-center justify-center"
                     >
                       {formatSequence(currentPick.sequence)}
                     </motion.div>
@@ -568,11 +568,11 @@ export default function App() {
         </section>
 
         {/* Pick List Section */}
-        <section className="flex-1 flex flex-col gap-3 min-h-0 pb-4">
+        <section className="flex flex-col gap-3 pb-4">
           <div className="flex items-center justify-between shrink-0">
             <h2 className="text-xs font-extrabold uppercase tracking-[0.3em] text-on-surface-variant">{t('pick_list')}</h2>
           </div>
-          <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-[5px] pl-0 -ml-[19px] -mr-[16px] no-scrollbar min-h-0">
+          <div className="flex flex-col gap-2.5 pr-[5px] pl-0 -ml-[19px] -mr-[16px] no-scrollbar">
             <AnimatePresence mode="popLayout" initial={false}>
               {sortedPicks.map((pick) => (
                 <PickListItem key={pick.id} pick={pick} isActive={currentPick?.id === pick.id} t={t} />
@@ -975,7 +975,7 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean, t: any }> = ({
     >
       <div className="flex items-center gap-5">
         <div className={cn(
-          "pl-[7px] pr-[10px] -ml-[12px] py-3 rounded font-display text-[clamp(1.25rem,3.5vw,2.5rem)] font-black tracking-tighter leading-none shadow-inner",
+          "pl-[7px] pr-[10px] -ml-[15px] py-3 rounded font-display text-[clamp(1.25rem,3.5vw,2.5rem)] font-black tracking-tighter leading-none shadow-inner min-w-[2.5ch] flex items-center justify-center",
           isCompleted ? "bg-tertiary/20 text-tertiary" : 
           isCancelled ? "bg-error/20 text-error" :
           isActive ? "bg-yellow-400/30 text-yellow-700" :
@@ -985,7 +985,7 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean, t: any }> = ({
         </div>
         <div className="flex flex-col">
           <h3 className={cn(
-            "font-extrabold text-[clamp(1.1rem,2.8vw,1.8rem)] leading-tight tracking-tight pl-0 -ml-[13px]", 
+            "font-extrabold text-[20.5px] leading-tight tracking-tight pl-0 -ml-[10px]", 
             (isCompleted || isCancelled) && "text-on-surface-variant"
           )}>
             {t(pick.productName as any)}

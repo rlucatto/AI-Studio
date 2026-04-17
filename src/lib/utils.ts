@@ -10,5 +10,5 @@ export function formatOrderId(id: number): string {
 }
 
 export function formatSequence(seq: number): string {
-  return seq.toString().padStart(3, '0');
+  return seq.toString();
 }
