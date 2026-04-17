@@ -572,7 +572,7 @@ export default function App() {
           <div className="flex items-center justify-between shrink-0">
             <h2 className="text-xs font-extrabold uppercase tracking-[0.3em] text-on-surface-variant">{t('pick_list')}</h2>
           </div>
-          <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-2 custom-scrollbar min-h-0">
+          <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-[5px] pl-0 -ml-[19px] -mr-[16px] custom-scrollbar min-h-0">
             <AnimatePresence mode="popLayout" initial={false}>
               {sortedPicks.map((pick) => (
                 <PickListItem key={pick.id} pick={pick} isActive={currentPick?.id === pick.id} t={t} />
@@ -975,7 +975,7 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean, t: any }> = ({
     >
       <div className="flex items-center gap-5">
         <div className={cn(
-          "px-5 py-3 rounded font-display text-[clamp(1.25rem,3.5vw,2.5rem)] font-black tracking-tighter leading-none shadow-inner",
+          "pl-[7px] pr-[10px] -ml-[12px] py-3 rounded font-display text-[clamp(1.25rem,3.5vw,2.5rem)] font-black tracking-tighter leading-none shadow-inner",
           isCompleted ? "bg-tertiary/20 text-tertiary" : 
           isCancelled ? "bg-error/20 text-error" :
           isActive ? "bg-yellow-400/30 text-yellow-700" :
@@ -985,7 +985,7 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean, t: any }> = ({
         </div>
         <div className="flex flex-col">
           <h3 className={cn(
-            "font-extrabold text-[clamp(1.1rem,2.8vw,1.8rem)] leading-tight tracking-tight", 
+            "font-extrabold text-[clamp(1.1rem,2.8vw,1.8rem)] leading-tight tracking-tight pl-0 -ml-[13px]", 
             (isCompleted || isCancelled) && "text-on-surface-variant"
           )}>
             {t(pick.productName as any)}
