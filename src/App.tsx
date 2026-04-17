@@ -454,7 +454,7 @@ export default function App() {
                 transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
                 className={cn(
-                  "bg-surface-container-lowest rounded-xl border-4 overflow-hidden shadow-xl transition-all duration-500",
+                  "bg-surface-container-lowest rounded-xl border-4 overflow-hidden shadow-xl transition-all duration-500 ml-[7px]",
                   currentPick.status === 'Deslocando' ? "border-error" : 
                   currentPick.status === 'Aguardando coleta' ? "border-tertiary" : 
                   "border-primary"
@@ -573,9 +573,11 @@ export default function App() {
             <h2 className="text-xs font-extrabold uppercase tracking-[0.3em] text-on-surface-variant">{t('pick_list')}</h2>
           </div>
           <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto pr-2 custom-scrollbar min-h-0">
-            {sortedPicks.map((pick) => (
-              <PickListItem key={pick.id} pick={pick} isActive={currentPick?.id === pick.id} t={t} />
-            ))}
+            <AnimatePresence mode="popLayout" initial={false}>
+              {sortedPicks.map((pick) => (
+                <PickListItem key={pick.id} pick={pick} isActive={currentPick?.id === pick.id} t={t} />
+              ))}
+            </AnimatePresence>
             {sortedPicks.length === 0 && (
               <div className="text-center py-12 text-outline uppercase tracking-widest text-xs font-bold">
                 {t('empty_list')}
@@ -902,10 +904,10 @@ function InfoItem({ label, value }: { label: string, value: string }) {
         hidden: { opacity: 0, y: 5 },
         visible: { opacity: 1, y: 0 }
       }}
-      className="flex flex-col"
+      className="flex flex-col items-center"
     >
-      <span className="text-[11px] uppercase font-extrabold text-outline tracking-widest font-tech">{label}</span>
-      <span className="text-xl font-black font-display text-on-surface tracking-tighter">{value}</span>
+      <span className="text-[11px] uppercase font-extrabold text-outline tracking-widest font-tech text-center">{label}</span>
+      <span className="text-xl font-black font-display text-on-surface tracking-tighter text-center">{value}</span>
     </motion.div>
   );
 }
@@ -952,14 +954,22 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean, t: any }> = ({
   }, [isActive]);
 
   return (
-    <div 
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ 
+        layout: { type: "spring", stiffness: 300, damping: 30 },
+        opacity: { duration: 0.2 }
+      }}
       ref={itemRef}
       className={cn(
-        "rounded-lg border-l-4 py-0.5 px-5 flex items-center justify-between shadow-sm transition-all",
+        "rounded-lg border-l-4 py-0.5 px-5 flex items-center justify-between shadow-sm transition-all ml-[7px]",
         // Background and border colors based on status/active
         isCompleted && "bg-tertiary/10 border-tertiary opacity-90",
         isCancelled && "bg-error/10 border-error opacity-80",
-        isActive && "bg-yellow-400/10 border-yellow-400 ring-2 ring-yellow-400 ring-offset-2 scale-[1.02] shadow-lg z-10",
+        isActive && "bg-yellow-400/10 border-yellow-400 ring-2 ring-yellow-400 z-10",
         (!isActive && !isCompleted && !isCancelled) && "bg-surface-container-low border-outline-variant opacity-60"
       )}
     >
@@ -984,33 +994,33 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean, t: any }> = ({
       </div>
       <div className="flex items-center gap-8">
         <div className="hidden sm:flex gap-3">
-          <div className="flex flex-col">
-            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('area')}</span>
-            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.area}</span>
+          <div className="flex flex-col items-center">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1 text-center">{t('area')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none text-center">{pick.area}</span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('zone')}</span>
-            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.zona}</span>
+          <div className="flex flex-col items-center">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1 text-center">{t('zone')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none text-center">{pick.zona}</span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('aisle')}</span>
-            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.corredor}</span>
+          <div className="flex flex-col items-center">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1 text-center">{t('aisle')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none text-center">{pick.corredor}</span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('comp')}</span>
-            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.compartimento}</span>
+          <div className="flex flex-col items-center">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1 text-center">{t('comp')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none text-center">{pick.compartimento}</span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('level')}</span>
-            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.nivel}</span>
+          <div className="flex flex-col items-center">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1 text-center">{t('level')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none text-center">{pick.nivel}</span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('position')}</span>
-            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.posicao}</span>
+          <div className="flex flex-col items-center">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1 text-center">{t('position')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none text-center">{pick.posicao}</span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1">{t('command')}</span>
-            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none">{pick.comando}</span>
+          <div className="flex flex-col items-center">
+            <span className="text-[clamp(10px,1vw,12px)] uppercase font-extrabold text-outline tracking-widest font-tech leading-none mb-1 text-center">{t('command')}</span>
+            <span className="text-[clamp(1.1rem,2vw,1.6rem)] font-black font-display text-on-surface tracking-tighter leading-none text-center">{pick.comando}</span>
           </div>
         </div>
         {isCompleted ? (
@@ -1018,14 +1028,17 @@ const PickListItem: React.FC<{ pick: PickItem, isActive: boolean, t: any }> = ({
         ) : isCancelled ? (
           <XCircle className="text-error" size={24} fill="currentColor" fillOpacity={0.2} />
         ) : (
-          <span className={cn(
-            "w-3 h-3 rounded-full",
-            isActive ? "bg-yellow-400 animate-pulse" : 
-            "bg-surface-container-high border-2 border-outline-variant"
-          )}></span>
+          <motion.span 
+            layout
+            className={cn(
+              "w-3 h-3 rounded-full",
+              isActive ? "bg-yellow-400 animate-pulse" : 
+              "bg-surface-container-high border-2 border-outline-variant"
+            )}
+          ></motion.span>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
